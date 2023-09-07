@@ -4,15 +4,289 @@
 		<meta charset="utf-8">
 		<title>Datos tránsito</title>
 		<link rel="icon" type="image/png" href="images/favicon.ico">
+		<!--
 		<script type="text/javascript" src="d3.js"></script>
-	</head>
-	<body>
+		-->
+		
+		<script src="https://d3js.org/d3.v4.min.js"></script>
+		<script src="https://d3js.org/d3-array.v3.min.js"></script>
+		<script src="https://d3js.org/d3-axis.v3.min.js"></script>
+		<script src="https://d3js.org/d3-chord.v3.min.js"></script>
+		<script src="https://d3js.org/d3-color.v3.min.js"></script>
+		<script src="https://d3js.org/d3-contour.v3.min.js"></script>
+		<script src="https://d3js.org/d3-force.v3.min.js"></script>
+		<script src="https://d3js.org/d3-geo.v3.min.js"></script>
+		<script src="https://d3js.org/d3-hierarchy.v3.min.js"></script> 
+		<script src="https://d3js.org/d3-interpolate.v3.min.js"></script> 
+		<script src="https://d3js.org/d3-path.v3.min.js"></script>
+		<script src="https://d3js.org/d3-path.v3.min.js"></script>
+		<script src="https://d3js.org/d3-polygon.v3.min.js"></script>
+		<script src="https://d3js.org/d3-scale-chromatic.v3.min.js"></script>
+		<script src="https://d3js.org/d3-selection.v3.min.js"></script>
+		<script src="https://d3js.org/d3-shape.v3.min.js"></script>
+		<!--
+		<script src="https://d3js.org/d3.v4.js"></script>
+		-->
+		<script src="https://d3js.org/d3-queue.v3.min.js"></script>
 		<script type="text/javascript">
 
-			d3.csv("data/historico_siniestros_bogota_2017.csv", function(data) {
-				console.log(data);
-			});
+			// Declare the chart dimensions and margins.
+			const width = 928;
+			const height = 500;
+			const marginTop = 20;
+			const marginRight = 30;
+			const marginBottom = 30;
+			const marginLeft = 40;
 
-		</script>
-	</body>
+			let todosJson;
+			let gravedadAnioJson = [];
+
+			init();
+
+			function init(){				
+				d3.queue()
+					.defer(d3.csv, "data/historico_siniestros_bogota_2017.csv")
+					.defer(d3.csv, "data/gravedad_anio.csv")
+					.await(function(error, file1, file2) {
+						console.log(error);
+						todosJson = file1;						
+						console.log(todosJson);
+
+						//gravedadAnioJson = file2;
+						/*
+						gravedadAnioJson = file2.map(function(row) {
+							let val = parseFloat(row["Total"]);
+							row["Total"] = isNaN(val) ? null : val;
+							return row;
+						});
+						*/
+
+						//let columna = [];
+
+						/*
+						for (let i = 0; i < file2.length; i++) {
+							let val = parseFloat(file2[i][0]);
+							if (!isNaN(val)) {
+								gravedadAnioJson.push(val);
+							}
+						}
+						*/
+
+						gravedadAnioJson = file2;
+						console.log(gravedadAnioJson);
+						
+						if (error) {
+							console.error('oh dear, something went wrong: ' + error);
+						}
+						else {
+							drawCharts();
+						}
+				});
+			}
+
+			function drawCharts(){
+				console.log("drawCharts() ->");
+				drawChartX11();
+				drawChartX12();
+				drawChartX13();
+				drawChartX21();
+				drawChartX22();
+				drawChartX23();
+				drawChartX31();
+				drawChartX32();
+				drawChartX33();				
+			}
+
+			function drawChartX11(){
+				console.log("drawChartX11() ->");
+
+				/*
+				const width = 928;
+				const height = 500;
+				const marginTop = 10;
+				const marginRight = 10;
+				const marginBottom = 20;
+				const marginLeft = 40;
+
+				// Determine the series that need to be stacked.
+				const series = d3.stack()
+					.keys(d3.union(gravedadAnioJson.map(d => d.Anio))) // distinct series keys, in input order
+					.value(([, D], key) => D.get(key).Total) // get value for each series key and stack
+					(d3.index(gravedadAnioJson, d => d.Anio, d => d.Gravedad)); // group by stack then series key
+				console.log("OK");
+				// Prepare the scales for positional and color encodings.
+				const x = d3.scaleBand()
+					.domain(d3.groupSort(gravedadAnioJson, D => -d3.sum(D, d => d.Total), d => d.Anio))
+					.range([marginLeft, width - marginRight])
+					.padding(0.1);
+				console.log("OK");
+				const y = d3.scaleLinear()
+					.domain([0, d3.max(series, d => d3.max(d, d => d[1]))])
+					.rangeRound([height - marginBottom, marginTop]);
+				console.log("OK");
+				const color = d3.scaleOrdinal()
+					.domain(series.map(d => d.key))
+					.range(d3.schemeSpectral[series.length])
+					.unknown("#ccc");
+				console.log("OK");
+				// A function to format the value in the tooltip.
+				const formatValue = x => isNaN(x) ? "N/A" : x.toLocaleString("en")
+				console.log("OK");
+				// Create the SVG container.
+				const svg = d3.select("body").append("svg") // d3.create("svg")
+					.attr("width", width)
+					.attr("height", height)
+					.attr("viewBox", [0, 0, width, height])
+					.attr("style", "max-width: 100%; height: auto;");
+				console.log("OK");
+				// Append a group for each series, and a rect for each element in the series.
+				svg.append("g")
+					.selectAll()
+					.data(series)
+					.join("g")
+					.attr("fill", d => color(d.key))
+					.selectAll("rect")
+					.data(D => D.map(d => (d.key = D.key, d)))
+					.join("rect")
+					.attr("x", d => x(d.gravedadAnioJson[0]))
+					.attr("y", d => y(d[1]))
+					.attr("height", d => y(d[0]) - y(d[1]))
+					.attr("width", x.bandwidth())
+					.append("title")
+					.text(d => `${d.gravedadAnioJson[0]} ${d.key}\n${formatValue(d.gravedadAnioJson[1].get(d.key).Total)}`);
+				console.log("OK");
+				// Append the horizontal axis.
+				svg.append("g")
+					.attr("transform", `translate(0,${height - marginBottom})`)
+					.call(d3.axisBottom(x).tickSizeOuter(0))
+					.call(g => g.selectAll(".domain").remove());
+
+				// Append the vertical axis.
+				svg.append("g")
+					.attr("transform", `translate(${marginLeft},0)`)
+					.call(d3.axisLeft(y).ticks(null, "s"))
+					.call(g => g.selectAll(".domain").remove());
+
+				// Return the chart with the color scale as a property (for the legend).
+				return Object.assign(svg.node(), {scales: {color}});	
+				*/	
+				
+				/*
+				const gravs = Object.keys(gravedadAnioJson[0]).slice(1);
+				data = d3.sort(gravedadAnioJson, d => -d3.sum(gravs, Anio => d[Anio])).slice(0, 6);
+				data = gravs.flatMap((Anio) => data.map((d) => ({Anio: d.Anio, Anio, Total: d[Anio]})));
+				console.log(data);
+				*/
+				
+				const width = 928;
+				const height = 600;
+				const marginTop = 10;
+				const marginRight = 10;
+				const marginBottom = 20;
+				const marginLeft = 40;
+
+				const fx = d3.scaleBand()
+					//.domain(new Set(gravedadAnioJson.map(d => d.Anio)))
+					.domain(gravedadAnioJson.map(function(d){ return d.Anio; }))
+					.rangeRound([marginLeft, width - marginRight])
+					.paddingInner(0.1);
+
+				// Both x and color encode the age class.
+				const grav = new Set(gravedadAnioJson.map(d => d.Gravedad));
+				
+				const x = d3.scaleBand()
+					//.domain(grav)
+					.domain(gravedadAnioJson.map(function(d){ return d.Gravedad; }))
+					.rangeRound([0, fx.bandwidth()])
+					.padding(0.05);
+				
+				const color = d3.scaleOrdinal()
+					//.domain(grav)
+					.domain(gravedadAnioJson.map(function(d){ return d.Gravedad; }))
+					.range(d3.schemeSpectral[grav.size])
+					.unknown("#ccc");				
+				
+				// Y encodes the height of the bar.
+				const y = d3.scaleLinear()
+					.domain([0, d3.max(gravedadAnioJson, d => d.Total)]).nice()
+					.rangeRound([height - marginBottom, marginTop]);
+
+				// A function to format the value in the tooltip.
+				const formatValue = x => isNaN(x) ? "N/A" : x.toLocaleString("en")					
+
+				// Create the SVG container.
+				const svg = d3.select("body").append("svg") //d3.create("svg")
+					.attr("width", width)
+					.attr("height", height)
+					.attr("viewBox", [0, 0, width, height])
+					.attr("style", "max-width: 100%; height: auto;");
+
+				// Append a group for each state, and a rect for each age.
+				svg.append("g")
+					.selectAll()
+					.data(d3.group(gravedadAnioJson, d => d.Anio))
+					.join("g")
+					.attr("transform", ([Anio]) => `translate(${fx(Anio)},0)`)
+					.selectAll()
+					.data(([, d]) => d)
+					.join("rect")
+					.attr("x", d => x(d.Anio))
+					.attr("y", d => y(d.Total))
+					.attr("width", x.bandwidth())
+					.attr("height", d => y(0) - y(d.Total))
+					.attr("fill", d => color(d.Anio));				
+
+				// Append the horizontal axis.
+				svg.append("g")
+					.attr("transform", `translate(0,${height - marginBottom})`)
+					.call(d3.axisBottom(fx).tickSizeOuter(0))
+					.call(g => g.selectAll(".domain").remove());
+
+				// Append the vertical axis.
+				svg.append("g")
+					.attr("transform", `translate(${marginLeft},0)`)
+					.call(d3.axisLeft(y).ticks(null, "s"))
+					.call(g => g.selectAll(".domain").remove());
+					
+				console.log(svg);
+
+				//return svg.node();
+				return Object.assign(svg.node(), {scales: {color}});
+			}
+
+			function drawChartX12(){
+				console.log("drawChartX12() ->");
+			}			
+
+			function drawChartX13(){
+				console.log("drawChartX13() ->");
+			}	
+			
+			function drawChartX21(){
+				console.log("drawChartX21() ->");
+			}			
+
+			function drawChartX22(){
+				console.log("drawChartX22() ->");
+			}					
+			
+			function drawChartX23(){
+				console.log("drawChartX23() ->");
+			}
+			
+			function drawChartX31(){
+				console.log("drawChartX31() ->");
+			}					
+			
+			function drawChartX32(){
+				console.log("drawChartX32() ->");
+			}					
+			
+			function drawChartX33(){
+				console.log("drawChartX33() ->");
+			}
+
+		</script>		
+	</head>
+	<body></body>
 </html>
