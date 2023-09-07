@@ -231,9 +231,9 @@
 					.data(([, d]) => d)
 					.join("rect")
 					.attr("x", d => x(d.Anio))
-					.attr("y", d => y(d.Total))
+					.attr("y", d => y(Number(d.Total)))
 					.attr("width", x.bandwidth())
-					.attr("height", d => y(0) - y(d.Total))
+					.attr("height", d => y(0) - y(Number(d.Total)))
 					.attr("fill", d => color(d.Anio));				
 
 				// Append the horizontal axis.
